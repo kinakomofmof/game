@@ -1,11 +1,11 @@
-name: Build
+name: Build Multi-Arch
 
 on:
   push:
   pull_request:
 
 jobs:
-  build:
+  build-x86_64:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -13,11 +13,28 @@ jobs:
       - name: Install build tools
         run: sudo apt-get update && sudo apt-get install -y build-essential
 
-      - name: Build
-        run: make
+      - name: Build (x86_64)
+        run: gcc main.c -o game-x86_64
 
-      - name: Upload artifact
+      - name: Upload artifact (x86_64)
         uses: actions/upload-artifact@v4
         with:
-          name: game
-          path: game
+          name: game-x86_64
+          path: game-x86_64
+
+  build-arm64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ARM64 cross compiler
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Build (ARM64)
+        run: aarch64-linux-gnu-gcc main.c -o game-arm64
+
+      - name: Upload artifact (ARM64)
+        uses: actions/upload-artifact@v4
+        with:
+          name: game-arm64
+          path: game-arm64
