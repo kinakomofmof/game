@@ -13,3 +13,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y build-essential
       - name: Build
         run: make
+- name: Upload artifact
+  uses: actions/upload-artifact@v3
+  with:
+    name: game
+    path: game
