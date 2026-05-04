@@ -1,29 +1,145 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-
 /*
-Copyright (c)2026 kinakomofmof
-Licensed under the Apache License, Version 2.0
+Ultimate Number Guessing Game 2026
+Copyright (C) 2026  kinakomofmof
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License version 3,
+as published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+#define CONFIG_PATH "/lib/com.kinakomofmof/game/settings/settings.yml"
+#define DEFAULT_SCORE_PATH "/lib/com.kinakomofmof/game/scores/scores.txt"
+
+// 設定
+int saveScore = 1;
+char scorePath[256] = DEFAULT_SCORE_PATH;
+
+// -------------------------------
+// 設定ファイル読み込み
+// -------------------------------
+void load_config() {
+    FILE *fp = fopen(CONFIG_PATH, "r");
+    if (!fp) return; // 初回起動
+
+    char line[256];
+    while (fgets(line, sizeof(line), fp)) {
+        if (strstr(line, "save:")) {
+            saveScore = strstr(line, "true") ? 1 : 0;
+        }
+        if (strstr(line, "path:")) {
+            char *p = strchr(line, '"');
+            if (p) {
+                p++;
+                char *q = strchr(p, '"');
+                if (q) *q = '\0';
+                strcpy(scorePath, p);
+            }
+        }
+    }
+    fclose(fp);
+}
+
+// -------------------------------
+// 初回セットアップ
+// -------------------------------
+void setup() {
+    printf("--- GAME SETUP ---\n");
+
+    printf("スコアを保存しますか？ (y/n): ");
+    char c;
+    scanf(" %c", &c);
+    saveScore = (c == 'y');
+
+    printf("スコア保存場所を選択:\n");
+    printf("1. デフォルト (%s)\n", DEFAULT_SCORE_PATH);
+    printf("2. 任意の場所\n> ");
+
+    int choice;
+    scanf("%d", &choice);
+
+    if (choice == 1) {
+        strcpy(scorePath, DEFAULT_SCORE_PATH);
+    } else {
+        printf("パスを入力してください: ");
+        scanf("%s", scorePath);
+    }
+
+    // ディレクトリ作成
+    system("mkdir -p /lib/com.kinakomofmof/game/settings/");
+
+    // 設定保存
+    FILE *fp = fopen(CONFIG_PATH, "w");
+    fprintf(fp,
+        "score:\n"
+        "  save: %s\n"
+        "  path: \"%s\"\n",
+        saveScore ? "true" : "false",
+        scorePath
+    );
+    fclose(fp);
+
+    printf("設定を保存しました。\n\n");
+}
+
+// -------------------------------
+// スコア保存
+// -------------------------------
+void save_score(int attempts) {
+    if (!saveScore) return;
+
+    system("mkdir -p /lib/com.kinakomofmof/game/scores/");
+
+    FILE *fp = fopen(scorePath, "a");
+    if (!fp) return;
+
+    fprintf(fp, "%d\n", attempts);
+    fclose(fp);
+}
+
+// -------------------------------
+// タイトル画面
+// -------------------------------
 void title_screen() {
     printf("=====================================\n");
     printf("      究極の数当てゲーム 2026\n");
     printf("=====================================\n");
     printf("   Enterキーで開始...\n");
-    getchar(); // 前の入力を消す
-    getchar(); // Enter待ち
+    getchar();
+    getchar();
 }
 
+// -------------------------------
+// メインゲーム
+// -------------------------------
 int main() {
-    while (1) {  // ★ リトライ対応のゲームループ
+
+    // 設定読み込み
+    load_config();
+
+    // 初回起動なら setup
+    if (saveScore != 0 && saveScore != 1) {
+        setup();
+    }
+
+    while (1) {
         int secret_number, guess, attempts = 0;
         int max_value = 0, max_attempts = 0, choice;
 
         srand(time(NULL));
 
-        // ★ タイトル画面
         title_screen();
 
         printf("--- 究極の数当てゲーム (Hardcore Edition) ---\n");
@@ -67,7 +183,6 @@ int main() {
                 printf(">> もっと大きい数字です。\n");
             }
 
-            // ★ ヒント強化
             if (diff <= 2 && diff != 0) {
                 printf(">> ★ 超ニアピン！ ★\n");
             } else if (diff <= 10 && diff != 0) {
@@ -76,16 +191,17 @@ int main() {
 
             if (guess == secret_number) {
                 printf("\n★ 正解！ %d回目でクリアしました！ ★\n", attempts);
+
+                save_score(attempts);
                 break;
             }
         }
 
         if (attempts >= max_attempts && guess != secret_number) {
             printf("\n【GAME OVER】残念！回数制限です。\n");
-            printf("正解は [%d] でした。修行して直してこい！\n", secret_number);
+            printf("正解は [%d] でした。\n", secret_number);
         }
 
-        // ★ リトライ機能
         char retry;
         printf("\nもう一度遊ぶ？ (y/n): ");
         while (scanf(" %c", &retry) != 1 || (retry != 'y' && retry != 'n')) {
@@ -98,7 +214,6 @@ int main() {
             break;
         }
 
-        // 入力バッファクリア
         while (getchar() != '\n');
     }
 
